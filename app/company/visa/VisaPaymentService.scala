@@ -8,11 +8,15 @@ import exceptions.BusinessException
 import play.api.http.Status
 import play.api.libs.json.JsValue
 import play.api.libs.ws.{WSClient, WSResponse}
+import services.FailureStatusService
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class VisaPaymentService @Inject()(wsClient: WSClient) extends CompanyPaymentService(wsClient) {
+class VisaPaymentService @Inject()(wsClient: WSClient, failureStatusService: FailureStatusService)
+  extends CompanyPaymentService(wsClient, failureStatusService) {
+
   private val FAILURE = "Failure"
+
   override def companyPaymentUrl: String = "https://interview.riskxint.com/visa/api/chargeCard"
   override protected def getRequestHeaders: (String, String) = ("identifier", "Avishai Yaniv")
 
@@ -28,8 +32,9 @@ class VisaPaymentService @Inject()(wsClient: WSClient) extends CompanyPaymentSer
 
   private def handleValidResponse(res: WSResponse): Unit = {
     val visaResponse = res.body[JsValue].as[VisaChargeResponse]
-    if (visaResponse.chargeResult == FAILURE)
+    if (visaResponse.chargeResult == FAILURE) {
       throw BusinessException(visaResponse.resultReason)
+    }
   }
 
   private def handleBadStatus(res: WSResponse) = {

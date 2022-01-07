@@ -7,11 +7,12 @@ import exceptions.BusinessException
 import play.api.Logger
 import play.api.libs.ws.{WSClient, WSResponse}
 import play.libs.Json
+import services.FailureStatusService
 
 import scala.concurrent.{ExecutionContext, Future}
 
 
-abstract class CompanyPaymentService @Inject()(val ws: WSClient)
+abstract class CompanyPaymentService @Inject()(val ws: WSClient, failureStatusService: FailureStatusService)
                                               (implicit ec: ExecutionContext) {
   protected val logger: Logger = Logger("play")
 
@@ -30,13 +31,14 @@ abstract class CompanyPaymentService @Inject()(val ws: WSClient)
     val companyRequest: CompanyChargeRequest = chargeToCompanyCharge(chargeRequest)
     val requestBody: String = Json.stringify(Json.toJson(companyRequest))
 
-    payWithRetry(requestBody, retryCount)
+    payWithRetry(requestBody, retryCount, merchantId)
   }
 
-  private def payWithRetry(requestBody: String, attempt: Int): Future[Unit] = {
+  private def payWithRetry(requestBody: String, attempt: Int, merchantId: String): Future[Unit] = {
     sendPayRequest(requestBody)
       .recoverWith { e => e match {
-          case BusinessException(_) if attempt != 0 =>
+          case BusinessException(reason) if attempt != 0 =>
+            failureStatusService.saveAggStatuses(merchantId, reason)
             logger.info(s"Failed to communicate with company $getCompany")
             val next: Int = getNextRetry(attempt)
             if (next == 0) throw e
@@ -44,7 +46,7 @@ abstract class CompanyPaymentService @Inject()(val ws: WSClient)
             Thread.sleep(next * 1000L)
 
             logger.info(s"retrying after $next sec")
-            payWithRetry(requestBody, attempt - 1)
+            payWithRetry(requestBody, attempt - 1, merchantId)
 
           case t: Throwable => throw t
         }

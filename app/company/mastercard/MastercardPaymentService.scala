@@ -8,10 +8,13 @@ import exceptions.BusinessException
 import play.api.libs.json.JsValue
 import play.api.libs.ws.{WSClient, WSResponse}
 import play.mvc.Http.Status
+import services.FailureStatusService
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class MastercardPaymentService @Inject()(wsClient: WSClient) extends CompanyPaymentService(wsClient) {
+class MastercardPaymentService @Inject()(wsClient: WSClient, failureStatusService: FailureStatusService)
+  extends CompanyPaymentService(wsClient, failureStatusService) {
+
   override def companyPaymentUrl: String = "https://interview.riskxint.com/mastercard/capture_card"
   override protected def getRequestHeaders: (String, String) = ("identifier", "Avishai Yaniv")
 
