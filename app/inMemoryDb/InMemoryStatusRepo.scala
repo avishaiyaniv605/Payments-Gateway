@@ -1,6 +1,5 @@
 package inMemoryDb
 
-import exceptions.UnknownIdentifierException
 import play.api.libs.json.{Json, OFormat}
 
 import scala.collection.mutable
@@ -17,7 +16,7 @@ object InMemoryStatusRepo {
   def getAggStatuses(identifier: String): Seq[InMemoryStatusEntry] = {
     inMemoryDb.get(identifier) match {
       case Some(statusesMap) => buildStatusesRes(statusesMap)
-      case _ => throw UnknownIdentifierException()
+      case _ => Seq[InMemoryStatusEntry]()
     }
   }
 
