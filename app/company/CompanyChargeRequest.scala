@@ -1,0 +1,3 @@
+package company
+
+trait CompanyChargeRequest
